@@ -54,47 +54,143 @@ public:
             int v;
            
             while (ss >> v) {
-                //TODO: insert v into _seq
+                _seq.push_back(v);
             }
         }
         
-        // TODO: ensure _maxSymbol = 127
+        _maxSymbol = 127;
 
     }
 
     
     void train(int k) {
-        // TODO: 
-        // Perform up to k merges. Stop early if no pair occurs more than once.
+        
+    for (int merge = 0; merge < k; merge++) {
+
+        for (int i = 0; i < 640; i++)
+            for (int j = 0; j < 640; j++)
+                _freq[i][j] = 0;
+
+        for (int i = 0; i + 1 < (int)_seq.size(); i++) {
+            int a = _seq[i];
+            int b = _seq[i + 1];
+            _freq[a][b]++;
+        }
+
+        int bestA = -1;
+        int bestB = -1;
+        int bestFreq = 0;
+
+        for (int a = 0; a < 640; a++) {
+            for (int b = 0; b < 640; b++) {
+                if (_freq[a][b] > bestFreq) {
+                    bestFreq = _freq[a][b];
+                    bestA = a;
+                    bestB = b;
+                }
+            }
+        }
+
+        if (bestFreq <= 1)
+            break;
+
+        _maxSymbol++;
+        int newSymbol = _maxSymbol;
+
+        _rules[_ruleCount][0] = bestA;
+        _rules[_ruleCount][1] = bestB;
+        _rules[_ruleCount][2] = newSymbol;
+        _ruleCount++;
+
+        vector<int> newSeq;
+
+        int i = 0;
+        while (i < (int)_seq.size()) {
+            if (i + 1 < (int)_seq.size() &&
+                _seq[i] == bestA &&
+                _seq[i + 1] == bestB) {
+
+                newSeq.push_back(newSymbol);
+                i += 2;
+            }
+            else {
+                newSeq.push_back(_seq[i]);
+                i++;
+            }
+        }
+
+        _seq = newSeq;
     }
+}
 
     
     void encode() {
-        //  TODO:
-        //  Apply the stored rules in LEARNING order (first rule first) to _seq.
-        //  For each rule (a, b -> z) from index 0 to _ruleCount-1:
-        //    scan _seq left to right, non-overlapping, replace (a, b) by z.
-    }
+        for (int r = 0; r < _ruleCount; r++) {
+        int a = _rules[r][0];
+        int b = _rules[r][1];
+        int z = _rules[r][2];
 
-    
+        vector<int> newSeq;
+
+        int i = 0;
+        while (i < (int)_seq.size()) {
+            if (i + 1 < (int)_seq.size() &&
+                _seq[i] == a &&
+                _seq[i + 1] == b) {
+
+                newSeq.push_back(z);
+                i += 2;
+            }
+            else {
+                newSeq.push_back(_seq[i]);
+                i++;
+            }
+        }
+
+        _seq = newSeq;
+    }
+}
+
     void decode() {
-        // TODO:
-        // Expand _seq using stored rules in REVERSE order (last rule first).
-        // Each z becomes the pair (a, b).
-    }
+        for (int r = _ruleCount - 1; r >= 0; r--) {
+        int a = _rules[r][0];
+        int b = _rules[r][1];
+        int z = _rules[r][2];
 
+        vector<int> newSeq;
+
+        for (int i = 0; i < (int)_seq.size(); i++) {
+            if (_seq[i] == z) {
+                newSeq.push_back(a);
+                newSeq.push_back(b);
+            }
+            else {
+                newSeq.push_back(_seq[i]);
+            }
+        }
+
+        _seq = newSeq;
+    }
+}
     
     void displaySequence() {
-        // TODO:
-        // Print _seq as space-separated integers with NO trailing space.
+        for (int i = 0; i < (int)_seq.size(); i++) {
+        if (i > 0)
+            cout << " ";
+
+        cout << _seq[i];
     }
 
+    cout << endl;
+    }
     
     void displayRules() {
-        // TODO:
-        // Print each learned rule on its own line as: a b z
+        for (int i = 0; i < _ruleCount; i++) {
+        cout << _rules[i][0] << " "
+             << _rules[i][1] << " "
+             << _rules[i][2] << endl;
+        }
     }
-
     // Used by main() to load the sequence after an E or D command.
     void setSequence(const vector<int>& s) { _seq = s; }
 };
@@ -130,7 +226,12 @@ int main() {
 
         char cmd = line[0];
         vector<int> vals;
-        // TODO: parse the integers after the command letter into vals
+        stringstream ss(line); 
+        ss >> cmd;
+        int v;
+        while (ss >> v) {
+            vals.push_back(v);
+        }
 
         if (cmd == 'E' || cmd == 'e') {
             compressor.setSequence(vals);
